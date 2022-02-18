@@ -1,4 +1,4 @@
-# VATSpy .dat to .json converter
+# VATSpy .DAT to .json converter
 
 ## Background
 VATSIM provides a lot of useful aviation data through the VATSIM data project - an extention of the VATSPY data format designed by Ross Carlson many years ago. 
