@@ -3,22 +3,30 @@ from datetime import datetime
 
 
 def vatspyDatToJson(inputFile, outputFile, airacCycle):
+    """
+    Converts the DAT file to JSON
+    :param inputFile: Specify the input filename that will be used to convert.
+    :param outputFile: Specify the output filename that the result will save as.
+    :param airacCycle: For reference, specify the airac cycle when the file was conerted.
+    :return: True/False if the conversion succeeded or not. Will print to the CLI as well.
+    """
 
-
-    # FIXME: Test if input filename exists
-
-
-    file = open(inputFile, 'r')
-    lines = file.readlines()
+    try:
+        with open(inputFile, 'r') as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        print("The file specified does not exist.")
 
     # Base JSON information
     time_now = datetime.now(pytz.utc)
     time_stamp = time_now.strftime("%Y%m%d")
 
     general = {
-        "version": "0.0.1",
-        "lastUpdated": time_stamp,
-        "vatspyData": "airac" + airacCycle
+        0: {
+            "version": "0.0.1",
+            "lastUpdated": time_stamp,
+            "vatspyData": "airac" + airacCycle
+        },
     }
 
     # Initialize counters
@@ -50,7 +58,7 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
             # Reset the counter
             i = 0
-            #print("Category Change! New: " + table)  # FIXME for debugging
+            # print("Category Change! New: " + table)  # FIXME for debugging
 
         # Ignore commented out lines
         elif line.startswith(';'):
@@ -64,9 +72,7 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
             if table == "Countries":
                 # Ignore empty list entries
-                if len(x) == 1:
-                    pass
-                else:
+                if len(x) != 1:
                     countries[i] = {
                         "name": x[0],
                         "code": x[1],
@@ -76,10 +82,7 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
             if table == "Airports":
                 # Ignore empty list entries
-                if len(x) == 1:
-                    pass
-
-                else:
+                if len(x) != 1:
                     airports[i] = {
                         "icao": x[0],
                         "name": x[1],
@@ -94,9 +97,7 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
             if table == "FIRs":
 
-                if len(x) == 1:
-                    pass
-                else:
+                if len(x) != 1:
                     firs[i] = {
                         "icao": x[0],
                         "name": x[1],
@@ -108,9 +109,7 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
             if table == "UIRs":
 
-                if len(x) == 1:
-                    pass
-                else:
+                if len(x) != 1:
                     uirs[i] = {
                         "prefix": x[0],
                         "name": x[1],
@@ -120,9 +119,7 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
                     i += 1
 
             if table == "IDL":
-                if len(x) == 1:
-                    pass
-                else:
+                if len(x) != 1:
                     idl[i] = {
                         "cord1": x[0],
                         "cord2": x[1]
@@ -144,14 +141,18 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
         json.dump(dictionary, outfile)
 
     print("Success!")
-    print("AIRAC {} : Successfully converted file {}. It has been saved as {}".format(airacCycle, inputFile, outputFile))
+    print(
+        "AIRAC {} : Successfully converted file {}. It has been saved as {}".format(airacCycle, inputFile, outputFile))
+    return True
+
 
 def run():
     parser = argparse.ArgumentParser()
 
     # -f FILE
     parser.add_argument("-f", "--filename", help="The path to the input file", default="VATSpy.dat")
-    parser.add_argument("-o", "--output", help="(Optional) Filename (and path) to the output file", default="VATSpy.json")
+    parser.add_argument("-o", "--output", help="(Optional) Filename (and path) to the output file",
+                        default="VATSpy.json")
     parser.add_argument("-a", "--airac", help="The number of the AIRAC cycle of the VATSIM Data", required=True)
 
     args = parser.parse_args()
