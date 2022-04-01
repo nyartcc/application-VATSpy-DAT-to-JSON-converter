@@ -65,29 +65,37 @@ def download_vatspy_data():
     if current_version == latest_version:
         print("No new version available")  # No new version available
     else:
-        print("New version available")  # New version available
-        print("Downloading latest version")
+        print("New version available! \n Version: {} \n Published at: {}".format(release_tag, asset["published_at"]))  # New version available
 
-        for i in asset["assets"]:
-            if i["name"] == DAT_FILE_NAME:
-                d["url"] = i["browser_download_url"]  # Get the URL of the latest VATSpy.dat
-        if verbose:
-            print("tag_name:", asset["tag_name"])
-            print("d:", d)
+        user_accept = input("Download new version? (y/n) ")
+        if user_accept == "y":
+
+            print("Downloading latest version...")
+
+            for i in asset["assets"]:
+                if i["name"] == DAT_FILE_NAME:
+                    d["url"] = i["browser_download_url"]  # Get the URL of the latest VATSpy.dat
+            if verbose:
+                print("tag_name:", asset["tag_name"])
+                print("d:", d)
 
 
 
-        download_url = d["url"]
-        if verbose:
-            print("download_url:", download_url)
+            download_url = d["url"]
+            if verbose:
+                print("download_url:", download_url)
 
-        r = requests.get(download_url)  # Download the VATSpy.dat file
-        with open(DAT_FILE_NAME, "wb") as f:
-            f.write(r.content)  # Write the file to the current directory
-        with open(META_NAME, "w") as f:
-            f.write(asset["tag_name"])  # Write the tag_name to the current directory
-        print("Downloaded {}".format(DAT_FILE_NAME))  # Print to the CLI
-        return True
+            r = requests.get(download_url)  # Download the VATSpy.dat file
+            with open(DAT_FILE_NAME, "wb") as f:
+                f.write(r.content)  # Write the file to the current directory
+            with open(META_NAME, "w") as f:
+                f.write(asset["tag_name"])  # Write the tag_name to the current directory
+            print("Downloaded {}".format(DAT_FILE_NAME))  # Print to the CLI
+            return True
+        else:
+            print("No new version downloaded")
+            return Exception
+
 
 
 def vatspy_dat_to_json():
@@ -99,7 +107,7 @@ def vatspy_dat_to_json():
     # Get the latest AIRAC cycle and create a .dat file for it.
     try:
         download_vatspy_data()  # Download the latest VATSpy.dat file from the VATSpy Data Project Github Repo.
-    except:
+    except Exception as e:
         print("Error downloading VATSpy.dat")
         return False
 
