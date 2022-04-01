@@ -1,18 +1,110 @@
 import json, pytz, argparse
+import os
+import sys
 from datetime import datetime
 
+import requests
 
-def vatspyDatToJson(inputFile, outputFile, airacCycle):
+verbose = True
+debug = True
+
+DAT_FILE_NAME = 'VATSpy.dat'
+JSON_FILE_NAME = 'VATSpy.json'
+META_NAME = 'VATSpy.meta'
+release_tag = ""
+
+
+# Check if the file exists
+def check_file(file_name):
+    if verbose:
+        print("Checking if file exists")
+    try:
+        with open(file_name):
+            return True
+    except FileNotFoundError:
+        return False
+
+
+# Check the first line of the metadata file
+def check_metadata(file_name):
+    if verbose:
+        print("Checking metadata")
+    try:
+        check_file(file_name)
+
+        with open(file_name) as f:
+            first_line = f.readline()
+            return first_line
+    except FileNotFoundError:
+        return ""
+
+
+def download_vatspy_data():
+    """
+    Download the latest navdata from the VATSpy Data Project Github Repo and save it to the current directory as
+    a .dat file. Also stores a .meta file containing the current release_tag for easier comparison.
+    :return: True if successful, False otherwise
+    """
+    # Download the latest navdata file
+    # Check the file exists
+    REPO_URL = "https://api.github.com/repos/vatsimnetwork/vatspy-data-project/releases/latest"
+
+    d = {}
+    r = requests.get(REPO_URL)  # Get the latest release
+    asset = r.json()
+
+    # Compare the current version to the latest release
+    current_version = check_metadata(META_NAME)
+    latest_version = asset['tag_name']
+    print("Current version: " + current_version)
+    print("Latest version: " + latest_version)
+
+    global release_tag
+    release_tag = asset["tag_name"]
+
+    if current_version == latest_version:
+        print("No new version available")  # No new version available
+    else:
+        print("New version available")  # New version available
+        print("Downloading latest version")
+
+        for i in asset["assets"]:
+            if i["name"] == DAT_FILE_NAME:
+                d["url"] = i["browser_download_url"]  # Get the URL of the latest VATSpy.dat
+        if verbose:
+            print("tag_name:", asset["tag_name"])
+            print("d:", d)
+
+
+
+        download_url = d["url"]
+        if verbose:
+            print("download_url:", download_url)
+
+        r = requests.get(download_url)  # Download the VATSpy.dat file
+        with open(DAT_FILE_NAME, "wb") as f:
+            f.write(r.content)  # Write the file to the current directory
+        with open(META_NAME, "w") as f:
+            f.write(asset["tag_name"])  # Write the tag_name to the current directory
+        print("Downloaded {}".format(DAT_FILE_NAME))  # Print to the CLI
+        return True
+
+
+def vatspy_dat_to_json():
     """
     Converts the DAT file to JSON
-    :param inputFile: Specify the input filename that will be used to convert.
-    :param outputFile: Specify the output filename that the result will save as.
-    :param airacCycle: For reference, specify the airac cycle when the file was conerted.
     :return: True/False if the conversion succeeded or not. Will print to the CLI as well.
     """
 
+    # Get the latest AIRAC cycle and create a .dat file for it.
     try:
-        with open(inputFile, 'r') as f:
+        download_vatspy_data()  # Download the latest VATSpy.dat file from the VATSpy Data Project Github Repo.
+    except:
+        print("Error downloading VATSpy.dat")
+        return False
+
+    try:
+        with open(DAT_FILE_NAME, 'r') as f:
             lines = f.readlines()
     except FileNotFoundError:
         print("The file specified does not exist.")
@@ -23,9 +115,8 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
     general = {
         0: {
-            "version": "0.0.1",
             "lastUpdated": time_stamp,
-            "vatspyData": "airac" + airacCycle
+            "vatspyData": release_tag
         },
     }
 
@@ -58,7 +149,8 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
             # Reset the counter
             i = 0
-            # print("Category Change! New: " + table)  # FIXME for debugging
+            if verbose:
+                print("Category Change! New: " + table)
 
         # Ignore commented out lines
         elif line.startswith(';'):
@@ -66,7 +158,7 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
 
         # If not a new category, or a commented line
         else:
-            # Get rid of new line charcaters, and split into a list for each column
+            # Get rid of new line characters, and split into a list for each column
             x = line.strip()
             x = x.split("|")
 
@@ -137,27 +229,21 @@ def vatspyDatToJson(inputFile, outputFile, airacCycle):
     }
 
     # Dump it to JSON and save it as a file.
-    with open(outputFile, 'w') as outfile:
+    with open(JSON_FILE_NAME, 'w') as outfile:
         json.dump(dictionary, outfile)
 
     print("Success!")
     print(
-        "AIRAC {} : Successfully converted file {}. It has been saved as {}".format(airacCycle, inputFile, outputFile))
+        "AIRAC {} : Successfully converted file {}. It has been saved as {}".format(release_tag, DAT_FILE_NAME,
+                                                                                    JSON_FILE_NAME))
     return True
 
 
 def run():
-    parser = argparse.ArgumentParser()
+    convert = vatspy_dat_to_json()
+    if convert:
+        print("Success!")
 
-    # -f FILE
-    parser.add_argument("-f", "--filename", help="The path to the input file", default="VATSpy.dat")
-    parser.add_argument("-o", "--output", help="(Optional) Filename (and path) to the output file",
-                        default="VATSpy.json")
-    parser.add_argument("-a", "--airac", help="The number of the AIRAC cycle of the VATSIM Data", required=True)
 
-    args = parser.parse_args()
-
-    if args.filename == False:
-        print("You must specify a filename with -f. Use --help for more info.")
-
-    vatspyDatToJson(args.filename, args.output, args.airac)
+if __name__ == "__main__":
+    run()
