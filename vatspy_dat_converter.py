@@ -65,7 +65,8 @@ def download_vatspy_data():
     if current_version == latest_version:
         print("No new version available")  # No new version available
     else:
-        print("New version available! \n Version: {} \n Published at: {}".format(release_tag, asset["published_at"]))  # New version available
+        print("New version available! \n Version: {} \n Published at: {}".format(release_tag, asset[
+            "published_at"]))  # New version available
 
         user_accept = input("Download new version? (y/n) ")
         if user_accept == "y":
@@ -78,8 +79,6 @@ def download_vatspy_data():
             if verbose:
                 print("tag_name:", asset["tag_name"])
                 print("d:", d)
-
-
 
             download_url = d["url"]
             if verbose:
@@ -95,7 +94,6 @@ def download_vatspy_data():
         else:
             print("No new version downloaded")
             return Exception
-
 
 
 def vatspy_dat_to_json():
